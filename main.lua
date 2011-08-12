@@ -1,14 +1,19 @@
 require "helper"
 require "bit"
 
+-- 16 keys
+keys = {}
+keys["1"] = 1
+keys["1"] = 1
+keys["1"] = 1
 
-keys = {
+	"1", "2", "3",
 	"q", "w", "e",
 	"a", "s", "d",
-	"y", "x", "c",
-	"r", "f", "v",
-	"t", "g", "b"
+	"y", [0]="x" "c",
+	"4", "r", "f", "v"
 }
+input = {}
 
 
 function love.keypressed(key)
@@ -17,7 +22,7 @@ function love.keypressed(key)
 	end
 
 	for k, v in pairs(keys) do
-	
+		
 	end
 
 end
