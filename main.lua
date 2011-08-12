@@ -48,9 +48,17 @@ function love.load()
 	love.mouse.setVisible(false)
 
 	-- prepare memory
-	mem = {}
+	mem = { 0xF0, 0x90, 0x90, 0x90, 0xF0, 0x20, 0x60, 0x20, 0x20, 0x70,
+			0xF0, 0x10, 0xF0, 0x80, 0xF0, 0xF0, 0x10, 0xF0, 0x10, 0xF0, 0x90,
+			0x90, 0xF0, 0x10, 0x10, 0xF0, 0x80, 0xF0, 0x10, 0xF0, 0xF0, 0x80,
+			0xF0, 0x90, 0xF0, 0xF0, 0x10, 0x20, 0x40, 0x40, 0xF0, 0x90, 0xF0,
+			0x90, 0xF0, 0xF0, 0x90, 0xF0, 0x10, 0xF0, 0xF0, 0x90, 0xF0, 0x90,
+			0x90, 0xE0, 0x90, 0xE0, 0x90, 0xE0, 0xF0, 0x80, 0x80, 0x80, 0xF0,
+			0xE0, 0x90, 0x90, 0x90, 0xE0, 0xF0, 0x80, 0xF0, 0x80, 0xF0, 0xF0,
+			0x80, 0xF0, 0x80, 0x80 }
+
 	local i = 0x200
-	for b in io.open("roms/MAZE"):read("*a"):gmatch(".") do
+	for b in io.open("roms/UFO"):read("*a"):gmatch(".") do
 		mem[i] = string.byte(b)
 		i = i + 1
 	end
@@ -170,16 +178,16 @@ function cycle()
 			reg.C = reg.C + 2
 		end
 
-	elseif a == 10 then	-- sne
+	elseif a == 0xa then	-- sne
 		reg.I = b * 256 + cd
 
-	elseif a == 11 then	-- jp
+	elseif a == 0xb then	-- jp
 		reg.C = b * 256 + cd + reg[0]
 
-	elseif a == 12 then	-- rnd
+	elseif a == 0xc then	-- rnd
 		reg[b] = bit.band(math.random(0, 255), cd)
 
-	elseif a == 13 then	-- drw
+	elseif a == 0xd then	-- drw
 		local x = b
 		local y = c
 		reg[15] = 0
@@ -194,18 +202,50 @@ function cycle()
 			y = y + 1
 		end
 
-	elseif a == 14 and c == 9 and d == 14 then	-- skp
+	elseif a == 0xe and cd == 0x9e then	-- skp
 		if input[b] then
 			reg.C = reg.C + 2
 		end
 
-	elseif a == 14 and c == 10 and d == 1 then	-- sknp
+	elseif a == 0xe and cd == 0xa1 then	-- skp
 		if not input[b] then
 			reg.C = reg.C + 2
 		end
 
 
+	-- TODO: more opcodes...
 
+
+	elseif a == 0xf then
+		if cd == 0x1e then
+			reg.I = (reg.I + reg[b]) % 0x1000
+
+
+
+		elseif cd == 0x33 then	-- bcd stuff
+			mem[reg.I] = math.floor(reg[b] / 100)
+			mem[reg.I] = math.floor(reg[b] / 10) % 10
+			mem[reg.I + 2] = reg[b] % 10
+
+
+		elseif cd == 0x29 then	--ld
+			reg.I = 1 + reg[b] % 16 * 5
+
+		elseif cd == 0x55 then	-- ld
+			for i = 0, b do
+				mem[reg.I + i] = reg[i]
+			end
+
+		elseif cd == 0x65 then	-- ld
+			for i = 0, b do
+				reg[i] = mem[reg.I + i]
+			end
+
+
+
+		end
+	else
+		print(a, b, c, d)
 
 	end
 end
@@ -223,7 +263,7 @@ function love.draw()
 		local y = math.floor(i / 64)
 		local b = display[i]
 
-		local color = b == 1 and { 255, 255, 255 } or { 0, 0, 0}
+		local color = b == 1 and { 255, 255, 255 } or { 0, 0, 0 }
 		love.graphics.setColor(unpack(color))
 		love.graphics.rectangle("fill", x * 4, y * 4, 4, 4)
 		
