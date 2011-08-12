@@ -194,6 +194,18 @@ function cycle()
 			y = y + 1
 		end
 
+	elseif a == 14 and c == 9 and d == 14 then	-- skp
+		if input[b] then
+			reg.C = reg.C + 2
+		end
+
+	elseif a == 14 and c == 10 and d == 1 then	-- sknp
+		if not input[b] then
+			reg.C = reg.C + 2
+		end
+
+
+
 
 	end
 end
