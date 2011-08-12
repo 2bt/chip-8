@@ -4,17 +4,23 @@ require "bit"
 -- 16 keys
 keys = {}
 keys["1"] = 1
-keys["1"] = 1
-keys["1"] = 1
+keys["2"] = 2
+keys["3"] = 3
+keys["q"] = 4
+keys["w"] = 5
+keys["e"] = 6
+keys["a"] = 7
+keys["s"] = 8
+keys["d"] = 9
+keys["y"] = 10
+keys["x"] = 0
+keys["c"] = 11
+keys["4"] = 12
+keys["r"] = 13
+keys["f"] = 14
+keys["v"] = 15
 
-	"1", "2", "3",
-	"q", "w", "e",
-	"a", "s", "d",
-	"y", [0]="x" "c",
-	"4", "r", "f", "v"
-}
 input = {}
-
 
 function love.keypressed(key)
 	if key == "escape" then
@@ -22,10 +28,20 @@ function love.keypressed(key)
 	end
 
 	for k, v in pairs(keys) do
-		
+		if key == k then
+			input[v] = true
+		end
 	end
-
 end
+
+function love.keyreleased(key)
+	for k, v in pairs(keys) do
+		if key == k then
+			input[v] = false
+		end
+	end
+end
+
 
 
 function love.load()
@@ -66,8 +82,7 @@ function love.update(dt)
 end
 
 
-function love.draw()
-
+function cycle()
 	local ab = mem[reg.C]
 	local cd = mem[reg.C + 1]
 
@@ -180,14 +195,16 @@ function love.draw()
 		end
 
 
-
-
-
-
-
-
 	end
+end
 
+
+function love.draw()
+
+	-- testing
+	cycle()
+
+	-- render display
 
 	for i = 0, 64 * 32 - 1 do
 		local x = i % 64
