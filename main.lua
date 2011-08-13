@@ -58,7 +58,7 @@ function love.load()
 			0x80, 0xF0, 0x80, 0x80 }
 
 	local i = 0x200
-	for b in io.open("roms/HIDDEN"):read("*a"):gmatch(".") do
+	for b in io.open("roms/MAZE"):read("*a"):gmatch(".") do
 		mem[i] = string.byte(b)
 		i = i + 1
 	end
@@ -155,10 +155,10 @@ function cycle()
 
 		elseif d == 4 then	-- add
 			reg[b] = (reg[b] + reg[c]) % 256
-			reg[15] = reg[b] + reg[c] > 256 and 1 or 0
+			reg[15] = reg[b] + reg[c] >= 256 and 1 or 0
 
 		elseif d == 5 then	-- sub
-			reg[15] = reg[b] < reg[c] and 1 or 0
+			reg[15] = reg[b] <= reg[c] and 1 or 0
 			reg[b] = (reg[b] - reg[c] + 256) % 256
 
 		elseif d == 6 then	-- shr
@@ -166,10 +166,10 @@ function cycle()
 			reg[b] = math.floor(reg[b] / 2)
 
 		elseif d == 7 then	-- subn
-			reg[15] = reg[c] < reg[b] and 1 or 0
+			reg[15] = reg[c] <= reg[b] and 1 or 0
 			reg[b] = (reg[c] - reg[b] + 256) % 256
 
-		elseif d == 14 then	-- shr
+		elseif d == 0xe then	-- shr
 			reg[15] = math.floor(reg[b] / 128)
 			reg[b] = (reg[b] * 2) % 256
 
@@ -193,8 +193,9 @@ function cycle()
 		reg[b] = bit.band(math.random(0, 255), cd)
 
 	elseif a == 0xd then	-- drw
-		local x = b
-		local y = c
+		local x = reg[b]
+		local y = reg[c]
+
 		reg[15] = 0
 		for i = 0, d - 1 do
 			local m = mem[reg.I + i]
@@ -228,37 +229,38 @@ function cycle()
 
 
 	elseif a == 0xf then
-		if cd == 0x1e then
-			reg.I = (reg.I + reg[b]) % 0x1000
 
-
-		elseif cd == 0x15 then	-- timer
+		if cd == 0x15 then	-- timer
 			return reg[b]
 
 		elseif cd == 0x18 then	-- timer
 			return reg[b]
 
+		elseif cd == 0x1e then
+			reg.I = (reg.I + reg[b]) % 0x1000
 
-		elseif cd == 0x29 then	-- ld
-			reg.I = 1 + (reg[b] % 16) * 5
+
+		elseif cd == 0x29 then		-- ld
+			reg.I = reg[b] * 5 + 1
 
 
-		elseif cd == 0x33 then	-- bcd stuff
+		elseif cd == 0x33 then		-- bcd stuff
 			mem[reg.I + 0] = math.floor(reg[b] / 100)
 			mem[reg.I + 1] = math.floor(reg[b] / 10) % 10
 			mem[reg.I + 2] = reg[b] % 10
 
 
-		elseif cd == 0x55 then	-- ld
+		elseif cd == 0x55 then		-- ld
 			for i = 0, b do
 				mem[reg.I + i] = reg[i]
 			end
+			reg.I = reg.I + b + 1
 
-		elseif cd == 0x65 then	-- ld
+		elseif cd == 0x65 then		-- ld
 			for i = 0, b do
 				reg[i] = mem[reg.I + i]
 			end
-
+			reg.I = reg.I + b + 1
 
 
 		else
@@ -275,7 +277,7 @@ end
 function love.draw()
 
 	-- testing
-	for i = 0, 100 do
+	for i = 1, 100 do
 		if cycle() then
 			break
 		end
