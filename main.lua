@@ -58,7 +58,7 @@ function love.load()
 			0x80, 0xF0, 0x80, 0x80 }
 
 	local i = 0x200
-	for b in io.open("roms/UFO"):read("*a"):gmatch(".") do
+	for b in io.open("roms/HIDDEN"):read("*a"):gmatch(".") do
 		mem[i] = string.byte(b)
 		i = i + 1
 	end
@@ -116,7 +116,7 @@ function cycle()
 		reg.C = b * 256 + cd
 
 	elseif a == 2 then				-- call
-		stack[#stack + 1] = reg.C + 2
+		stack[#stack + 1] = reg.C
 		reg.C = b * 256 + cd
 
 	elseif a == 3 then				-- skip
@@ -138,40 +138,45 @@ function cycle()
 		reg[b] = cd
 
 	elseif a == 7 then				-- add
-		reg[b] = reg[b] + cd
+		reg[b] = (reg[b] + cd) % 256
 
-	elseif a == 8 and d == 0 then	-- set
-		reg[b] = reg[c]
+	elseif a == 8 then
+		if d == 0 then	-- set
+			reg[b] = reg[c]
 
-	elseif a == 8 and d == 1 then	-- or
-		reg[b] = bit.bor(reg[b], reg[c])
+		elseif d == 1 then	-- or
+			reg[b] = bit.bor(reg[b], reg[c])
 
-	elseif a == 8 and d == 2 then	-- and
-		reg[b] = bit.band(reg[b], reg[c])
+		elseif d == 2 then	-- and
+			reg[b] = bit.band(reg[b], reg[c])
 
-	elseif a == 8 and d == 3 then	-- xor
-		reg[b] = bit.bxor(reg[b], reg[c])
+		elseif d == 3 then	-- xor
+			reg[b] = bit.bxor(reg[b], reg[c])
 
-	elseif a == 8 and d == 4 then	-- add
-		reg[b] = reg[b] + reg[c]
-		reg[15] = math.floor(reg[b] / 256)
-		reg[b] = reg[b] % 256
+		elseif d == 4 then	-- add
+			reg[b] = (reg[b] + reg[c]) % 256
+			reg[15] = reg[b] + reg[c] > 256 and 1 or 0
 
-	elseif a == 8 and d == 5 then	-- sub
-		reg[15] = reg[b] > reg[c] and 1 or 0
-		reg[b] = (reg[b] - reg[c] + 256) % 256
+		elseif d == 5 then	-- sub
+			reg[15] = reg[b] < reg[c] and 1 or 0
+			reg[b] = (reg[b] - reg[c] + 256) % 256
 
-	elseif a == 8 and d == 6 then	-- shr
-		reg[15] = reg[b] % 2
-		reg[b] = math.floor(reg[b] / 2)
+		elseif d == 6 then	-- shr
+			reg[15] = reg[b] % 2
+			reg[b] = math.floor(reg[b] / 2)
 
-	elseif a == 8 and d == 7 then	-- subn
-		reg[15] = reg[c] > reg[b] and 1 or 0
-		reg[b] = (reg[c] - reg[b] + 256) % 256
+		elseif d == 7 then	-- subn
+			reg[15] = reg[c] < reg[b] and 1 or 0
+			reg[b] = (reg[c] - reg[b] + 256) % 256
 
-	elseif a == 8 and d == 14 then	-- shr
-		reg[15] = math.floor(reg[b] / 128)
-		reg[b] = (reg[b] * 2) % 256
+		elseif d == 14 then	-- shr
+			reg[15] = math.floor(reg[b] / 128)
+			reg[b] = (reg[b] * 2) % 256
+
+		else
+			print(a, b, c, d)
+		end
+
 
 	elseif a == 9 and d == 0 then	-- sne
 		if reg[b] ~= reg[c] then
@@ -182,7 +187,7 @@ function cycle()
 		reg.I = b * 256 + cd
 
 	elseif a == 0xb then	-- jp
-		reg.C = b * 256 + cd + reg[0]
+		reg.C = (b * 256 + cd + reg[0]) % 0x1000
 
 	elseif a == 0xc then	-- rnd
 		reg[b] = bit.band(math.random(0, 255), cd)
@@ -191,27 +196,33 @@ function cycle()
 		local x = b
 		local y = c
 		reg[15] = 0
-		for i = reg.I, reg.I + d - 1 do
-			local m = mem[i]
+		for i = 0, d - 1 do
+			local m = mem[reg.I + i]
 			for j = 0, 7 do
 				if bit.band(m, 2 ^ (7 - j)) > 0 then
-					display[x + j + y * 64] = 1 - display[x + y * 64]
-					reg[15] = 1
+					local q = display[x + j + (y + i) * 64]
+					if q == 1 then
+						reg[15] = 1
+					end
+					display[x + j + (y + i) * 64] = 1 - q
 				end
 			end
-			y = y + 1
 		end
 
-	elseif a == 0xe and cd == 0x9e then	-- skp
-		if input[b] then
-			reg.C = reg.C + 2
-		end
+	elseif a == 0xe then
+		if cd == 0x9e then	-- skp
+			if input[b] then
+				reg.C = reg.C + 2
+			end
 
-	elseif a == 0xe and cd == 0xa1 then	-- skp
-		if not input[b] then
-			reg.C = reg.C + 2
-		end
+		elseif cd == 0xa1 then	-- skp
+			if not input[b] then
+				reg.C = reg.C + 2
+			end
 
+		else
+			print(a, b, c, d)
+		end
 
 	-- TODO: more opcodes...
 
@@ -221,15 +232,22 @@ function cycle()
 			reg.I = (reg.I + reg[b]) % 0x1000
 
 
+		elseif cd == 0x15 then	-- timer
+			return reg[b]
+
+		elseif cd == 0x18 then	-- timer
+			return reg[b]
+
+
+		elseif cd == 0x29 then	-- ld
+			reg.I = 1 + (reg[b] % 16) * 5
+
 
 		elseif cd == 0x33 then	-- bcd stuff
-			mem[reg.I] = math.floor(reg[b] / 100)
-			mem[reg.I] = math.floor(reg[b] / 10) % 10
+			mem[reg.I + 0] = math.floor(reg[b] / 100)
+			mem[reg.I + 1] = math.floor(reg[b] / 10) % 10
 			mem[reg.I + 2] = reg[b] % 10
 
-
-		elseif cd == 0x29 then	--ld
-			reg.I = 1 + reg[b] % 16 * 5
 
 		elseif cd == 0x55 then	-- ld
 			for i = 0, b do
@@ -243,18 +261,25 @@ function cycle()
 
 
 
+		else
+			print(a, b, c, d)
 		end
 	else
 		print(a, b, c, d)
 
 	end
+
 end
 
 
 function love.draw()
 
 	-- testing
-	cycle()
+	for i = 0, 100 do
+		if cycle() then
+			break
+		end
+	end
 
 	-- render display
 
