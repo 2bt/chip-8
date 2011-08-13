@@ -58,7 +58,7 @@ function love.load()
 			0x80, 0xF0, 0x80, 0x80 }
 
 	local i = 0x200
-	for b in io.open("roms/MAZE"):read("*a"):gmatch(".") do
+	for b in io.open("roms/BLITZ"):read("*a"):gmatch(".") do
 		mem[i] = string.byte(b)
 		i = i + 1
 	end
@@ -73,6 +73,8 @@ function love.load()
 	end
 	reg.I = 0
 	reg.C = 0x200
+	reg.D = 0
+	reg.S = 0
 	
 	stack = {}
 
@@ -201,23 +203,23 @@ function cycle()
 			local m = mem[reg.I + i]
 			for j = 0, 7 do
 				if bit.band(m, 2 ^ (7 - j)) > 0 then
-					local q = display[x + j + (y + i) * 64]
+					local q = display[(x + j) % 64 + ((y + i) % 32) * 64]
 					if q == 1 then
 						reg[15] = 1
 					end
-					display[x + j + (y + i) * 64] = 1 - q
+					display[(x + j) % 64 + ((y + i) % 32) * 64] = 1 - q
 				end
 			end
 		end
 
 	elseif a == 0xe then
 		if cd == 0x9e then	-- skp
-			if input[b] then
+			if input[reg[b]] then
 				reg.C = reg.C + 2
 			end
 
 		elseif cd == 0xa1 then	-- skp
-			if not input[b] then
+			if not input[reg[b]] then
 				reg.C = reg.C + 2
 			end
 
@@ -230,11 +232,28 @@ function cycle()
 
 	elseif a == 0xf then
 
-		if cd == 0x15 then	-- timer
-			return reg[b]
+		if cd == 0x07 then	-- timer
+			reg[b] = reg.D
+			if reg.D > 0 then
+				reg.D = reg.D - 1
+				return true
+			end
+
+		elseif cd == 0x0a then -- wait for key
+			reg.C = reg.C - 2
+			for i = 0, 15 do
+				if input[i] then
+					reg[b] = i
+					reg.C = reg.C + 2
+					break
+				end
+			end
+
+		elseif cd == 0x15 then	-- timer
+			reg.D = reg[b]
 
 		elseif cd == 0x18 then	-- timer
-			return reg[b]
+			reg.S = reg[b]
 
 		elseif cd == 0x1e then
 			reg.I = (reg.I + reg[b]) % 0x1000
@@ -277,7 +296,7 @@ end
 function love.draw()
 
 	-- testing
-	for i = 1, 100 do
+	for i = 1, 15 do
 		if cycle() then
 			break
 		end
