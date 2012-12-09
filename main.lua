@@ -160,7 +160,7 @@ function cycle()
 			reg[15] = reg[b] + reg[c] >= 256 and 1 or 0
 
 		elseif d == 5 then	-- sub
-			reg[15] = reg[b] <= reg[c] and 1 or 0
+			reg[15] = reg[b] <= reg[c] and 0 or 1
 			reg[b] = (reg[b] - reg[c] + 256) % 256
 
 		elseif d == 6 then	-- shr
@@ -168,7 +168,7 @@ function cycle()
 			reg[b] = math.floor(reg[b] / 2)
 
 		elseif d == 7 then	-- subn
-			reg[15] = reg[c] <= reg[b] and 1 or 0
+			reg[15] = reg[c] <= reg[b] and 0 or 1
 			reg[b] = (reg[c] - reg[b] + 256) % 256
 
 		elseif d == 0xe then	-- shr
