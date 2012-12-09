@@ -45,6 +45,13 @@ end
 
 
 function love.load()
+	local game = arg[2]
+	if game == nil then
+		print("game parameter missing")
+		love.event.quit()
+		return
+	end
+
 	love.mouse.setVisible(false)
 
 	-- prepare memory
@@ -58,7 +65,7 @@ function love.load()
 			0x80, 0xF0, 0x80, 0x80 }
 
 	local i = 0x200
-	for b in io.open("roms/BLITZ"):read("*a"):gmatch(".") do
+	for b in io.open(game):read("*a"):gmatch(".") do
 		mem[i] = string.byte(b)
 		i = i + 1
 	end
@@ -75,7 +82,7 @@ function love.load()
 	reg.C = 0x200
 	reg.D = 0
 	reg.S = 0
-	
+
 	stack = {}
 
 	display = {}
@@ -312,10 +319,7 @@ function love.draw()
 		local color = b == 1 and { 255, 255, 255 } or { 0, 0, 0 }
 		love.graphics.setColor(unpack(color))
 		love.graphics.rectangle("fill", x * 4, y * 4, 4, 4)
-		
 	end
 
 
 end
-
-
