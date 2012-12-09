@@ -24,7 +24,7 @@ input = {}
 
 function love.keypressed(key)
 	if key == "escape" then
-		love.event.push("q")
+		love.event.quit()
 	end
 
 	for k, v in pairs(keys) do
